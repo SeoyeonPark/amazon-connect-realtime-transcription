@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.transcribestreaming.TranscribeStreamingAsyncClient;
 import software.amazon.awssdk.services.transcribestreaming.model.AudioStream;
+import software.amazon.awssdk.services.transcribestreaming.model.LanguageCode;
 import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionRequest;
 import software.amazon.awssdk.services.transcribestreaming.model.StartStreamTranscriptionResponseHandler;
 
@@ -192,7 +193,11 @@ public class TranscribeStreamingRetryClient implements AutoCloseable {
 
     private StartStreamTranscriptionRequest rebuildRequestWithSession(StartStreamTranscriptionRequest request) {
         return StartStreamTranscriptionRequest.builder()
-                .languageCode(request.languageCode())
+                .identifyLanguage(true)
+                .languageOptions("ko-KR,en-US,zh-CN,ja-JP")
+                // .preferredLanguage(LanguageCode.KO_KR)
+                
+                // .languageCode(request.languageCode())
                 .mediaEncoding(request.mediaEncoding())
                 .mediaSampleRateHertz(request.mediaSampleRateHertz())
                 .sessionId(UUID.randomUUID().toString())

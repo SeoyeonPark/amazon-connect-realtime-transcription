@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Optional;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -109,12 +110,12 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
 
             // If an inputFileName has been provided in the request, stream audio from the file to Transcribe
             if (request.getInputFileName() != null) {
-                startFileToTranscribeStreaming(request.getInputFileName(), request.getLanguageCode());
+                startFileToTranscribeStreaming(request.getInputFileName());
             }
             // Else start streaming between KVS and Transcribe
             else {
                 startKVSToTranscribeStreaming(request.getStreamARN(), request.getStartFragmentNum(), request.getConnectContactId(),
-                        request.isTranscriptionEnabled(), request.getLanguageCode(), request.getSaveCallRecording(),
+                        request.isTranscriptionEnabled(), request.getSaveCallRecording(),
                         request.isStreamAudioFromCustomer(), request.isStreamAudioToCustomer());
             }
 
@@ -138,7 +139,7 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
      * @throws Exception
      */
     private void startKVSToTranscribeStreaming(String streamARN, String startFragmentNum, String contactId, boolean transcribeEnabled,
-                                               Optional<String> languageCode, Optional<Boolean> saveCallRecording,
+                                               Optional<Boolean> saveCallRecording,
                                                boolean isStreamAudioFromCustomerEnabled, boolean isStreamAudioToCustomerEnabled) throws Exception {
         String streamName = streamARN.substring(streamARN.indexOf("/") + 1, streamARN.lastIndexOf("/"));
 
@@ -162,12 +163,12 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
 
                 if (kvsStreamTrackObjectFromCustomer != null) {
                     fromCustomerResult = getStartStreamingTranscriptionFuture(kvsStreamTrackObjectFromCustomer,
-                            languageCode, contactId, client, fromCustomerSegmentWriter, TABLE_CALLER_TRANSCRIPT, KVSUtils.TrackName.AUDIO_FROM_CUSTOMER.getName());
+                            contactId, client, fromCustomerSegmentWriter, TABLE_CALLER_TRANSCRIPT, KVSUtils.TrackName.AUDIO_FROM_CUSTOMER.getName());
                 }
 
                 if (kvsStreamTrackObjectToCustomer != null) {
                     toCustomerResult = getStartStreamingTranscriptionFuture(kvsStreamTrackObjectToCustomer,
-                            languageCode, contactId, client, toCustomerSegmentWriter, TABLE_CALLER_TRANSCRIPT_TO_CUSTOMER, KVSUtils.TrackName.AUDIO_TO_CUSTOMER.getName());
+                            contactId, client, toCustomerSegmentWriter, TABLE_CALLER_TRANSCRIPT_TO_CUSTOMER, KVSUtils.TrackName.AUDIO_TO_CUSTOMER.getName());
                 }
 
                 // Synchronous wait for stream to close, and close client connection
@@ -226,7 +227,7 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
      * @param languageCode the language code to be used for Transcription (optional; see https://docs.aws.amazon.com/transcribe/latest/dg/API_streaming_StartStreamTranscription.html#API_streaming_StartStreamTranscription_RequestParameters )
      * @throws Exception
      */
-    private void startFileToTranscribeStreaming(String inputFileName, Optional<String> languageCode) throws Exception {
+    private void startFileToTranscribeStreaming(String inputFileName) throws Exception {
 
         // get the audio from S3
         String audioFilePath = "/tmp/" + inputFileName;
@@ -242,7 +243,7 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
 
             CompletableFuture<Void> result = client.startStreamTranscription(
                     // since we're definitely working with telephony audio, we know that's 8 kHz
-                    getRequest(8000, languageCode),
+                    getRequest(8000),
                     new FileAudioStreamPublisher(inputStream),
                     new StreamTranscriptionBehaviorImpl(fromCustomerSegmentWriter, TABLE_CALLER_TRANSCRIPT),
                     "None"
@@ -315,13 +316,13 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
     }
 
 
-    private CompletableFuture<Void> getStartStreamingTranscriptionFuture(KVSStreamTrackObject kvsStreamTrackObject, Optional<String> languageCode,
+    private CompletableFuture<Void> getStartStreamingTranscriptionFuture(KVSStreamTrackObject kvsStreamTrackObject, 
                                                                          String contactId, TranscribeStreamingRetryClient client,
                                                                          TranscribedSegmentWriter transcribedSegmentWriter,
                                                                          String tableName, String channel) {
         return client.startStreamTranscription(
                 // since we're definitely working with telephony audio, we know that's 8 kHz
-                getRequest(8000, languageCode),
+                getRequest(8000),
                 new KVSAudioStreamPublisher(
                         kvsStreamTrackObject.getStreamingMkvReader(),
                         contactId,
@@ -379,10 +380,15 @@ public class KVSTranscribeStreamingLambda implements RequestHandler<Transcriptio
      * @param languageCode the language code to be used for Transcription (optional; see https://docs.aws.amazon.com/transcribe/latest/dg/API_streaming_StartStreamTranscription.html#API_streaming_StartStreamTranscription_RequestParameters )
      * @return StartStreamTranscriptionRequest to be used to open a stream to transcription service
      */
-    private static StartStreamTranscriptionRequest getRequest(Integer mediaSampleRateHertz, Optional <String> languageCode) {
+    private static StartStreamTranscriptionRequest getRequest(Integer mediaSampleRateHertz) {
 
         return StartStreamTranscriptionRequest.builder()
-                .languageCode(languageCode.isPresent() ? languageCode.get() : LanguageCode.EN_US.toString())
+                .identifyLanguage(true)
+                .languageOptions("ko-KR,en-US,zh-CN,ja-JP")
+                // .preferredLanguage(LanguageCode.KO_KR)
+
+                // .languageCode(languageCode.isPresent() ? languageCode.get() : LanguageCode.EN_US.toString())
+
                 .mediaEncoding(MediaEncoding.PCM)
                 .mediaSampleRateHertz(mediaSampleRateHertz)
                 .build();

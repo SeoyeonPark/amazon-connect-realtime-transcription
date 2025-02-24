@@ -99,6 +99,7 @@ public class TranscribedSegmentWriter {
                         .withBoolean("IsPartial", result.isPartial())
                         // LoggedOn is an ISO-8601 string representation of when the entry was created
                         .withString("LoggedOn", now.toString())
+                        .withString("LanguageCode", result.languageCodeAsString())
                         // expire after a week by default
                         .withDouble("ExpiresAfter", now.plusSeconds(7 * 24 * 3600).toEpochMilli() / 1000);
 

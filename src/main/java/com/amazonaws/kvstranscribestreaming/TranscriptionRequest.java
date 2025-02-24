@@ -141,11 +141,11 @@ public class TranscriptionRequest {
 
         // language code is optional; if provided, it should be one of the values accepted by
         // https://docs.aws.amazon.com/transcribe/latest/dg/API_streaming_StartStreamTranscription.html#API_streaming_StartStreamTranscription_RequestParameters
-        if (languageCode.isPresent()) {
-            if (!LanguageCode.knownValues().contains(LanguageCode.fromValue(languageCode.get()))) {
-                throw new IllegalArgumentException("Incorrect language code");
-            }
-        }
+        // if (languageCode.isPresent()) {
+        //     if (!LanguageCode.knownValues().contains(LanguageCode.fromValue(languageCode.get()))) {
+        //         throw new IllegalArgumentException("Incorrect language code");
+        //     }
+        // }
     }
 
 }
