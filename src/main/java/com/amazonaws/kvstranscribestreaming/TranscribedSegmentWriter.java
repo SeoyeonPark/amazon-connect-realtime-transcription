@@ -91,8 +91,8 @@ public class TranscribedSegmentWriter {
 
                 Instant now = Instant.now();
                 ddbItem = new Item()
-                        .withKeyComponent("ContactId", contactId)
-                        .withKeyComponent("StartTime", result.startTime())
+                        .withKeyComponent("pk", "contactId#" + contactId)
+                        .withKeyComponent("sk", result.startTime() + "")
                         .withString("SegmentId", result.resultId())
                         .withDouble("EndTime", result.endTime())
                         .withString("Transcript", result.alternatives().get(0).transcript())
